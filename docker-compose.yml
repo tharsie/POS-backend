@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pos-postgres
+    environment:
+      POSTGRES_DB: pos_dev
+      POSTGRES_USER: pos_user
+      POSTGRES_PASSWORD: pos_password
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pos_user -d pos_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pos_private
+
+  api:
+    build:
+      context: .
+    container_name: pos-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    networks:
+      - pos_private
+    profiles:
+      - api
+
+volumes:
+  postgres_data:
+
+networks:
+  pos_private:
+    driver: bridge
