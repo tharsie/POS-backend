@@ -11,14 +11,14 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
-  const origins = config.getOrThrow<string[]>('cors.allowedOrigins');
+  const origins = config.get<string[]>('cors.allowedOrigins') ?? [];
 
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.use(helmet());
   app.use(compression());
   app.enableCors({
-    origin: origins.length === 0 ? false : origins,
+    origin: origins.length === 0 || origins.includes('*') ? true : origins,
     credentials: true,
   });
   app.useGlobalPipes(
@@ -33,7 +33,7 @@ async function bootstrap() {
 
   if (config.get<boolean>('swagger.enabled')) {
     const docConfig = new DocumentBuilder()
-      .setTitle(config.getOrThrow<string>('app.name'))
+      .setTitle(config.get<string>('app.name') || 'OmniPOS API')
       .setDescription('Commercial multi-tenant SaaS POS API')
       .setVersion('0.1.0')
       .addBearerAuth()
@@ -41,7 +41,8 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, docConfig));
   }
 
-  await app.listen(config.getOrThrow<number>('app.port'));
+  const port = config.get<number>('app.port') || Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
 }
 
 void bootstrap();
