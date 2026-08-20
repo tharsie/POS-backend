@@ -136,7 +136,7 @@ export class OrdersService {
       await tx.stockMovement.createMany({
         data: items.map((item) => ({
           businessId: context.businessId,
-          branchId: context.branchId!,
+          branchId,
           productId: item.product.id,
           type: 'SALE',
           quantity: item.quantity.neg(),
@@ -147,7 +147,7 @@ export class OrdersService {
       await this.auditLogs.create(
         {
           businessId: context.businessId,
-          branchId: context.branchId,
+          branchId,
           userId: context.userId,
           action: 'order.created',
           entityType: 'Order',
