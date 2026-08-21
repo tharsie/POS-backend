@@ -10,6 +10,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const isHttp = exception instanceof HttpException;
     const status = isHttp ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    
+    // Log unexpected internal server errors to the console so they show in PM2 logs
+    if (!isHttp || status === HttpStatus.INTERNAL_SERVER_ERROR) {
+      console.error('Unhandled Exception:', exception);
+    }
+
     const body = isHttp ? exception.getResponse() : undefined;
     const message =
       typeof body === 'object' && body !== null && 'message' in body
