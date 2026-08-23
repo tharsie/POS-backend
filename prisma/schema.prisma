@@ -556,19 +556,29 @@ model RestaurantTable {
   @@map("restaurant_tables")
 }
 
+enum KotItemChangeType {
+  NEW
+  MODIFIED
+  CANCELLED
+  UNCHANGED
+}
+
 model KitchenOrderTicket {
-  id           String    @id @default(uuid()) @db.Uuid
-  businessId   String    @map("business_id") @db.Uuid
-  branchId     String    @map("branch_id") @db.Uuid
-  orderId      String    @map("order_id") @db.Uuid
-  ticketNumber String    @map("ticket_number")
-  status       KotStatus @default(OPEN)
+  id           String                   @id @default(uuid()) @db.Uuid
+  businessId   String                   @map("business_id") @db.Uuid
+  branchId     String                   @map("branch_id") @db.Uuid
+  orderId      String                   @map("order_id") @db.Uuid
+  ticketNumber String                   @map("ticket_number")
+  version      Int                      @default(1)
+  isUpdate     Boolean                  @default(false) @map("is_update")
+  status       KotStatus                @default(OPEN)
   notes        String?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  business     Business  @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  branch       Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  order        Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  business     Business                 @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  branch       Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  order        Order                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  items        KitchenOrderTicketItem[]
 
   @@unique([businessId, ticketNumber])
   @@index([businessId])
@@ -576,6 +586,24 @@ model KitchenOrderTicket {
   @@index([orderId])
   @@map("kitchen_order_tickets")
 }
+
+model KitchenOrderTicketItem {
+  id               String             @id @default(uuid()) @db.Uuid
+  kotId            String             @map("kot_id") @db.Uuid
+  productId        String             @map("product_id") @db.Uuid
+  name             String
+  quantity         Decimal            @db.Decimal(14, 3)
+  previousQuantity Decimal?           @map("previous_quantity") @db.Decimal(14, 3)
+  changeType       KotItemChangeType  @default(NEW) @map("change_type")
+  notes            String?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  kot              KitchenOrderTicket @relation(fields: [kotId], references: [id], onDelete: Cascade)
+
+  @@index([kotId])
+  @@index([productId])
+  @@map("kitchen_order_ticket_items")
+}
+
 
 model OrderService {
   id          String         @id @default(uuid()) @db.Uuid

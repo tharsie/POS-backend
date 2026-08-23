@@ -27,7 +27,7 @@ export class AuthController {
 
   @Post('auth/refresh')
   refresh(@Body() dto: RefreshTokenDto, @Req() req: Request) {
-    return this.auth.refresh(dto.refreshToken, this.requestMeta(req));
+    return this.auth.refresh(dto.refreshToken, this.requestMeta(req), dto.accessToken);
   }
 
   @Post('auth/logout')

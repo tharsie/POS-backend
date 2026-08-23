@@ -135,7 +135,7 @@ export class AuthService {
     return this.issueAuthResponse(user, meta);
   }
 
-  async refresh(rawToken: string, meta: RequestMeta) {
+  async refresh(rawToken: string, meta: RequestMeta, expiredAccessToken?: string) {
     const tokenHash = this.sha256(rawToken);
     const existing = await this.prisma.refreshToken.findFirst({
       where: { tokenHash },
@@ -157,6 +157,43 @@ export class AuthService {
         message: 'Refresh token reuse detected',
       });
     }
+
+    // Preserve tenant context claims from expired access token if present
+    let tenantContext: Partial<AccessTokenPayload> | undefined = undefined;
+    if (expiredAccessToken) {
+      try {
+        const decoded = this.jwt.decode(expiredAccessToken) as AccessTokenPayload | null;
+        if (decoded && decoded.businessId) {
+          tenantContext = {
+            businessId: decoded.businessId,
+            businessMemberId: decoded.businessMemberId,
+            businessRole: decoded.businessRole,
+            branchId: decoded.branchId,
+          };
+        }
+      } catch {
+        // Ignore decode error
+      }
+    }
+
+    // Fallback: If no tenant context found in expired token, query user's active business member & branch
+    if (!tenantContext) {
+      const activeMember = await this.prisma.businessMember.findFirst({
+        where: { userId: existing.userId, status: 'ACTIVE', business: { isActive: true } },
+        include: { branchMembers: { include: { branch: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (activeMember) {
+        const activeBranchMember = activeMember.branchMembers.find((bm) => bm.branch.isActive);
+        tenantContext = {
+          businessId: activeMember.businessId,
+          businessMemberId: activeMember.id,
+          businessRole: activeMember.role,
+          branchId: activeBranchMember?.branchId,
+        };
+      }
+    }
+
     const replacement = this.generateRawToken();
     const created = await this.prisma.refreshToken.create({
       data: {
@@ -173,7 +210,7 @@ export class AuthService {
       data: { revokedAt: new Date(), revokedByIp: meta.ip, replacedByTokenId: created.id },
     });
     return {
-      accessToken: this.signAccessToken(existing.user),
+      accessToken: this.signAccessToken(existing.user, tenantContext),
       refreshToken: replacement,
     };
   }

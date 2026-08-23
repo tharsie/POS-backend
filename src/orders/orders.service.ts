@@ -23,7 +23,7 @@ export class OrdersService {
     }
     const orders = await this.prisma.order.findMany({
       where,
-      include: { customer: true, items: true, payments: true, kitchenTickets: true },
+      include: { customer: true, items: true, payments: true, kitchenTickets: { include: { items: true } } },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -45,7 +45,7 @@ export class OrdersService {
     }
     const order = await this.prisma.order.findFirst({
       where,
-      include: { customer: true, items: true, payments: true, kitchenTickets: true },
+      include: { customer: true, items: true, payments: true, kitchenTickets: { include: { items: true } } },
     });
     if (!order)
       throw new NotFoundException({ code: 'ORDER_NOT_FOUND', message: 'Order not found' });
@@ -235,7 +235,7 @@ export class OrdersService {
             })),
           },
         },
-        include: { customer: true, items: true, payments: true, kitchenTickets: true },
+        include: { customer: true, items: true, payments: true, kitchenTickets: { include: { items: true } } },
       });
 
       await this.auditLogs.create(

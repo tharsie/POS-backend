@@ -19,7 +19,10 @@ export class KotService {
     }
     return this.prisma.kitchenOrderTicket.findMany({
       where,
-      include: { order: { include: { items: true } } },
+      include: {
+        items: true,
+        order: { include: { items: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -33,19 +36,119 @@ export class KotService {
     const order = await this.prisma.order
       .findFirst({
         where: { id: dto.orderId, businessId: context.businessId },
+        include: { items: true },
       })
       .catch(() => null);
 
     if (!order)
       throw new BadRequestException({ code: 'ORDER_INVALID', message: 'Order is invalid' });
 
+    // Fetch existing tickets for this order to determine version & previous dispatched state
+    const existingTickets = await this.prisma.kitchenOrderTicket.findMany({
+      where: { orderId: order.id, businessId: context.businessId },
+      include: { items: true },
+      orderBy: { version: 'asc' },
+    });
+
+    const version = existingTickets.length + 1;
+    const isUpdate = version > 1;
+
+    // Calculate last dispatched quantity per product ID across all previous tickets
+    const lastDispatchedMap = new Map<string, { quantity: number; name: string }>();
+
+    for (const ticket of existingTickets) {
+      for (const item of ticket.items) {
+        const qty = Number(item.quantity);
+        if (item.changeType === 'CANCELLED') {
+          lastDispatchedMap.set(item.productId, { quantity: 0, name: item.name });
+        } else {
+          lastDispatchedMap.set(item.productId, { quantity: qty, name: item.name });
+        }
+      }
+    }
+
+    // Determine diff for current order items
+    const kotItemsData: {
+      productId: string;
+      name: string;
+      quantity: number;
+      previousQuantity: number | null;
+      changeType: 'NEW' | 'MODIFIED' | 'CANCELLED' | 'UNCHANGED';
+    }[] = [];
+
+    const currentProductIds = new Set<string>();
+
+    for (const orderItem of order.items) {
+      currentProductIds.add(orderItem.productId);
+      const currQty = Number(orderItem.quantity);
+      const prevData = lastDispatchedMap.get(orderItem.productId);
+      const prevQty = prevData ? prevData.quantity : 0;
+
+      if (!prevData || prevQty === 0) {
+        kotItemsData.push({
+          productId: orderItem.productId,
+          name: orderItem.name,
+          quantity: currQty,
+          previousQuantity: null,
+          changeType: 'NEW',
+        });
+      } else if (currQty !== prevQty) {
+        kotItemsData.push({
+          productId: orderItem.productId,
+          name: orderItem.name,
+          quantity: currQty,
+          previousQuantity: prevQty,
+          changeType: 'MODIFIED',
+        });
+      } else {
+        kotItemsData.push({
+          productId: orderItem.productId,
+          name: orderItem.name,
+          quantity: currQty,
+          previousQuantity: prevQty,
+          changeType: 'UNCHANGED',
+        });
+      }
+    }
+
+    // Check for cancelled items (items present in previous tickets but missing in current order)
+    lastDispatchedMap.forEach((data, productId) => {
+      if (!currentProductIds.has(productId) && data.quantity > 0) {
+        kotItemsData.push({
+          productId,
+          name: data.name,
+          quantity: 0,
+          previousQuantity: data.quantity,
+          changeType: 'CANCELLED',
+        });
+      }
+    });
+
+    const numCode = order.orderNumber.replace(/[^0-9]/g, '') || String(Date.now());
+    const ticketNumber = isUpdate ? `KOT-${numCode}-V${version}` : `KOT-${numCode}`;
+
     return this.prisma.kitchenOrderTicket.create({
       data: {
         businessId: context.businessId,
         branchId: context.branchId || order.branchId,
         orderId: order.id,
-        ticketNumber: `KOT-${Date.now()}`,
-        notes: dto.notes || 'POS Order Note',
+        ticketNumber,
+        version,
+        isUpdate,
+        notes: dto.notes || (isUpdate ? `KOT Update v${version}` : 'POS Order Note'),
+        items: {
+          create: kotItemsData.map((i) => ({
+            productId: i.productId,
+            name: i.name,
+            quantity: i.quantity,
+            previousQuantity: i.previousQuantity,
+            changeType: i.changeType,
+          })),
+        },
+      },
+      include: {
+        items: true,
+        order: { include: { items: true } },
       },
     });
   }
@@ -56,6 +159,13 @@ export class KotService {
       where: { id, businessId: context.businessId, branchId: context.branchId },
     });
     if (!ticket) throw new NotFoundException({ code: 'KOT_NOT_FOUND', message: 'KOT not found' });
-    return this.prisma.kitchenOrderTicket.update({ where: { id }, data: { status: dto.status } });
+    return this.prisma.kitchenOrderTicket.update({
+      where: { id },
+      data: { status: dto.status },
+      include: {
+        items: true,
+        order: { include: { items: true } },
+      },
+    });
   }
 }
