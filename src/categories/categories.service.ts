@@ -30,7 +30,6 @@ export class CategoriesService {
         name: dto.name,
         description: dto.description,
         kitchenStationId: dto.kitchenStationId || undefined,
-        kitchenStation: dto.kitchenStation,
         kotPrinterIp: dto.kotPrinterIp,
       },
       include: { kitchenStation: true },
@@ -59,11 +58,11 @@ export class CategoriesService {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.kitchenStationId !== undefined ? { kitchenStationId: dto.kitchenStationId || null } : {}),
-        ...(dto.kitchenStation !== undefined ? { kitchenStation: dto.kitchenStation } : {}),
         ...(dto.kotPrinterIp !== undefined ? { kotPrinterIp: dto.kotPrinterIp } : {}),
       },
       include: { kitchenStation: true },
     });
+
 
     await this.auditLogs.create({
       businessId: context.businessId,
