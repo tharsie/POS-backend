@@ -367,15 +367,17 @@ model AuditLog {
 }
 
 model Category {
-  id          String    @id @default(uuid()) @db.Uuid
-  businessId  String    @map("business_id") @db.Uuid
-  name        String
-  description String?
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  business    Business  @relation(fields: [businessId], references: [id], onDelete: Restrict)
-  products    Product[]
+  id             String    @id @default(uuid()) @db.Uuid
+  businessId     String    @map("business_id") @db.Uuid
+  name           String
+  description    String?
+  kitchenStation String?   @map("kitchen_station")
+  kotPrinterIp   String?   @map("kot_printer_ip")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  business       Business  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  products       Product[]
 
   @@unique([businessId, name])
   @@index([businessId])

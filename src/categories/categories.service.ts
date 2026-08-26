@@ -24,7 +24,13 @@ export class CategoriesService {
   async create(user: AccessTokenPayload, dto: CreateCategoryDto) {
     const context = this.tenant.requireBusiness(user);
     const category = await this.prisma.category.create({
-      data: { businessId: context.businessId, name: dto.name, description: dto.description },
+      data: {
+        businessId: context.businessId,
+        name: dto.name,
+        description: dto.description,
+        kitchenStation: dto.kitchenStation,
+        kotPrinterIp: dto.kotPrinterIp,
+      },
     });
     await this.auditLogs.create({
       businessId: context.businessId,
@@ -44,7 +50,15 @@ export class CategoriesService {
     });
     if (!category)
       throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
-    const updated = await this.prisma.category.update({ where: { id }, data: dto });
+    const updated = await this.prisma.category.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.kitchenStation !== undefined ? { kitchenStation: dto.kitchenStation } : {}),
+        ...(dto.kotPrinterIp !== undefined ? { kotPrinterIp: dto.kotPrinterIp } : {}),
+      },
+    });
     await this.auditLogs.create({
       businessId: context.businessId,
       userId: context.userId,
