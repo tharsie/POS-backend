@@ -17,6 +17,7 @@ export class CategoriesService {
     const context = this.tenant.requireBusiness(user);
     return this.prisma.category.findMany({
       where: { businessId: context.businessId, isActive: true },
+      include: { kitchenStation: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -28,9 +29,11 @@ export class CategoriesService {
         businessId: context.businessId,
         name: dto.name,
         description: dto.description,
+        kitchenStationId: dto.kitchenStationId || undefined,
         kitchenStation: dto.kitchenStation,
         kotPrinterIp: dto.kotPrinterIp,
       },
+      include: { kitchenStation: true },
     });
     await this.auditLogs.create({
       businessId: context.businessId,
@@ -55,10 +58,13 @@ export class CategoriesService {
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.kitchenStationId !== undefined ? { kitchenStationId: dto.kitchenStationId || null } : {}),
         ...(dto.kitchenStation !== undefined ? { kitchenStation: dto.kitchenStation } : {}),
         ...(dto.kotPrinterIp !== undefined ? { kotPrinterIp: dto.kotPrinterIp } : {}),
       },
+      include: { kitchenStation: true },
     });
+
     await this.auditLogs.create({
       businessId: context.businessId,
       userId: context.userId,

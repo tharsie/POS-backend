@@ -13,6 +13,11 @@ export class CreateCategoryDto {
   @MaxLength(500)
   description?: string;
 
+  @ApiPropertyOptional({ description: 'ID of the assigned KitchenStation' })
+  @IsOptional()
+  @IsString()
+  kitchenStationId?: string;
+
   @ApiPropertyOptional({ description: 'Assigned Kitchen / Dispatch Station (e.g. Main Kitchen, Cafe Bar)' })
   @IsOptional()
   @IsString()
@@ -39,6 +44,11 @@ export class UpdateCategoryDto {
   @MaxLength(500)
   description?: string;
 
+  @ApiPropertyOptional({ description: 'ID of the assigned KitchenStation' })
+  @IsOptional()
+  @IsString()
+  kitchenStationId?: string;
+
   @ApiPropertyOptional({ description: 'Assigned Kitchen / Dispatch Station (e.g. Main Kitchen, Cafe Bar)' })
   @IsOptional()
   @IsString()
@@ -51,3 +61,4 @@ export class UpdateCategoryDto {
   @MaxLength(120)
   kotPrinterIp?: string;
 }
+

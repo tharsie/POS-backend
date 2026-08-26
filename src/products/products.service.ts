@@ -18,10 +18,11 @@ export class ProductsService {
     const context = this.tenant.requireBusiness(user);
     return this.prisma.product.findMany({
       where: { businessId: context.businessId, status: 'ACTIVE' },
-      include: { category: true },
+      include: { category: { include: { kitchenStation: true } } },
       orderBy: { name: 'asc' },
     });
   }
+
 
   async create(user: AccessTokenPayload, dto: CreateProductDto) {
     const context = this.tenant.requireBusiness(user);
