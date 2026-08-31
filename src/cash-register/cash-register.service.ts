@@ -344,8 +344,9 @@ export class CashRegisterService {
     ]);
 
     return {
-      data: shifts.map((s) => ({
+      data: shifts.map((s: any) => ({
         ...s,
+
         openingFloat: Number(s.openingFloat),
         actualCash: s.actualCash != null ? Number(s.actualCash) : null,
         expectedCash: s.expectedCash != null ? Number(s.expectedCash) : null,
