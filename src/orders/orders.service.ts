@@ -106,12 +106,22 @@ export class OrdersService {
     const grandTotal = subtotal.add(serviceFee);
     const orderNumber = `ORD-${Date.now()}`;
 
+    const activeShift = await this.prisma.cashRegisterShift.findFirst({
+      where: {
+        businessId: context.businessId,
+        branchId,
+        userId: user.sub,
+        status: 'OPEN',
+      },
+    });
+
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
           businessId: context.businessId,
           branchId,
           customerId: dto.customerId,
+          shiftId: activeShift?.id,
           orderNumber,
           notes: dto.notes,
           tableName: dto.tableName,
@@ -133,6 +143,7 @@ export class OrdersService {
         },
         include: { items: true },
       });
+
       await tx.stockMovement.createMany({
         data: items.map((item) => ({
           businessId: context.businessId,

@@ -27,6 +27,7 @@ import { KotModule } from './kot/kot.module';
 import { BusinessMembersModule } from './business-members/business-members.module';
 import { PlatformAdminModule } from './platform-admin/platform-admin.module';
 import { ServicesModule } from './services/services.module';
+import { CashRegisterModule } from './cash-register/cash-register.module';
 
 @Module({
   imports: [
@@ -56,8 +57,10 @@ import { ServicesModule } from './services/services.module';
     BusinessMembersModule,
     PlatformAdminModule,
     ServicesModule,
+    CashRegisterModule,
     ...PlaceholderModules,
   ],
+
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
