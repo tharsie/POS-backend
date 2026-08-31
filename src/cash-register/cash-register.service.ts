@@ -153,22 +153,38 @@ export class CashRegisterService {
         user: { select: { id: true, fullName: true, email: true } },
         branch: { select: { id: true, name: true, code: true } },
         movements: { orderBy: { createdAt: 'desc' } },
-        orders: {
-          include: {
-            items: {
-              include: {
-                product: { select: { id: true, name: true, sku: true, categoryId: true } },
-              },
-            },
-            payments: true,
-          },
-        },
       },
     });
 
     if (!shift) {
       throw new NotFoundException({ code: 'SHIFT_NOT_FOUND', message: 'Shift not found.' });
     }
+
+    // Find all orders linked directly to this shiftId, OR created by this user in this branch during the shift duration
+    const shiftOrders = await this.prisma.order.findMany({
+      where: {
+        businessId: shift.businessId,
+        OR: [
+          { shiftId: shift.id },
+          {
+            branchId: shift.branchId,
+            createdById: shift.userId,
+            createdAt: {
+              gte: shift.openedAt,
+              ...(shift.closedAt ? { lte: shift.closedAt } : {}),
+            },
+          },
+        ],
+      },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true, categoryId: true } },
+          },
+        },
+        payments: true,
+      },
+    });
 
     // 1. Calculate Cash In / Cash Out
     let totalCashIn = 0;
@@ -187,12 +203,13 @@ export class CashRegisterService {
     let cardSales = 0;
     let otherSales = 0;
     let totalSales = 0;
-    let ordersCount = shift.orders.length;
+    let ordersCount = shiftOrders.length;
 
     // Itemized map: productId -> { name, quantitySold, totalRevenue, unitPrice }
     const itemsMap = new Map<string, { productId: string; name: string; quantitySold: number; totalRevenue: number; unitPrice: number }>();
 
-    for (const order of shift.orders) {
+    for (const order of shiftOrders) {
+
       if (order.status === 'CANCELLED') continue;
 
       // Payments breakdown

@@ -62,10 +62,29 @@ export class PaymentsService {
           receivedById: context.userId,
         },
       });
+      const orderUpdates: Prisma.OrderUpdateInput = {};
       const paid = alreadyPaid.add(amount);
       if (paid.greaterThanOrEqualTo(order.grandTotal)) {
-        await tx.order.update({ where: { id: order.id }, data: { status: 'PAID' } });
+        orderUpdates.status = 'PAID';
       }
+      if (!order.shiftId) {
+        const activeShift = await tx.cashRegisterShift.findFirst({
+          where: {
+            businessId: context.businessId,
+            branchId: context.branchId,
+            userId: user.sub,
+            status: 'OPEN',
+          },
+        });
+        if (activeShift) {
+          orderUpdates.shift = { connect: { id: activeShift.id } };
+        }
+
+      }
+      if (Object.keys(orderUpdates).length > 0) {
+        await tx.order.update({ where: { id: order.id }, data: orderUpdates });
+      }
+
       await this.auditLogs.create(
         {
           businessId: context.businessId,
