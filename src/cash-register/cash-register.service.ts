@@ -264,8 +264,19 @@ export class CashRegisterService {
       targetShiftId = activeShift.id;
     }
 
+    const existingShift = await this.prisma.cashRegisterShift.findFirst({
+      where: { id: targetShiftId, businessId: context.businessId },
+    });
+    if (!existingShift) {
+      throw new NotFoundException({ code: 'SHIFT_NOT_FOUND', message: 'Shift not found.' });
+    }
+    if (existingShift.status === ShiftStatus.CLOSED) {
+      return this.getShiftSummary(user, targetShiftId);
+    }
+
     const summary = await this.getShiftSummary(user, targetShiftId);
     const { financialSummary } = summary;
+
 
     const actualCash = Number(dto.actualCash);
     const expectedCash = financialSummary.expectedCash;
