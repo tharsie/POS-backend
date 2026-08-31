@@ -18,7 +18,7 @@ export class CashRegisterService {
     const context = this.tenant.requireBusiness(user);
     const targetBranchId = branchId || context.branchId;
 
-    return this.prisma.cashRegisterShift.findFirst({
+    const shift = await this.prisma.cashRegisterShift.findFirst({
       where: {
         businessId: context.businessId,
         userId: user.sub,
@@ -33,6 +33,19 @@ export class CashRegisterService {
       },
       orderBy: { openedAt: 'desc' },
     });
+
+    if (!shift) return null;
+
+    return {
+      ...shift,
+      openingFloat: Number(shift.openingFloat),
+      actualCash: shift.actualCash != null ? Number(shift.actualCash) : null,
+      expectedCash: shift.expectedCash != null ? Number(shift.expectedCash) : null,
+      difference: shift.difference != null ? Number(shift.difference) : null,
+      totalSales: shift.totalSales != null ? Number(shift.totalSales) : null,
+      cashSales: shift.cashSales != null ? Number(shift.cashSales) : null,
+      cardSales: shift.cardSales != null ? Number(shift.cardSales) : null,
+    };
   }
 
   async openShift(user: AccessTokenPayload, dto: OpenShiftDto) {
@@ -48,7 +61,6 @@ export class CashRegisterService {
     if (!targetBranchId) {
       throw new BadRequestException({ code: 'BRANCH_REQUIRED', message: 'A branch is required to open a register shift.' });
     }
-
 
     const existingOpen = await this.prisma.cashRegisterShift.findFirst({
       where: {
@@ -67,7 +79,7 @@ export class CashRegisterService {
       });
     }
 
-    return this.prisma.cashRegisterShift.create({
+    const created = await this.prisma.cashRegisterShift.create({
       data: {
         businessId: context.businessId,
         branchId: targetBranchId,
@@ -83,7 +95,13 @@ export class CashRegisterService {
         movements: true,
       },
     });
+
+    return {
+      ...created,
+      openingFloat: Number(created.openingFloat),
+    };
   }
+
 
   async recordMovement(user: AccessTokenPayload, dto: CashMovementDto) {
     const context = this.tenant.requireBusiness(user);
