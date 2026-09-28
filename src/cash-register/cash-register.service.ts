@@ -203,29 +203,52 @@ export class CashRegisterService {
     let cardSales = 0;
     let otherSales = 0;
     let totalSales = 0;
+    let cashSalesCount = 0;
+    let cardSalesCount = 0;
+    let otherSalesCount = 0;
+    let totalTax = 0;
+    let totalServiceFee = 0;
+    let totalDiscount = 0;
+    let paidOrdersCount = 0;
+    let cancelledOrdersCount = 0;
     let ordersCount = shiftOrders.length;
 
     // Itemized map: productId -> { name, quantitySold, totalRevenue, unitPrice }
     const itemsMap = new Map<string, { productId: string; name: string; quantitySold: number; totalRevenue: number; unitPrice: number }>();
 
     for (const order of shiftOrders) {
+      if (order.status === 'CANCELLED') {
+        cancelledOrdersCount++;
+        continue;
+      }
 
-      if (order.status === 'CANCELLED') continue;
-
+      let hasCompletedPayment = false;
       // Payments breakdown
       for (const payment of order.payments) {
         if (payment.status !== 'COMPLETED') continue;
+        hasCompletedPayment = true;
         const pAmt = Number(payment.amount);
         totalSales += pAmt;
 
         if (payment.method === 'CASH') {
           cashSales += pAmt;
+          cashSalesCount++;
         } else if (payment.method === 'CARD') {
           cardSales += pAmt;
+          cardSalesCount++;
         } else {
           otherSales += pAmt;
+          otherSalesCount++;
         }
       }
+
+      if (hasCompletedPayment || order.status === 'PAID') {
+        paidOrdersCount++;
+      }
+
+      totalTax += Number(order.taxTotal || 0);
+      totalServiceFee += Number(order.serviceFee || 0);
+      totalDiscount += Number(order.discountTotal || 0);
 
       // If order is paid or open, accumulate items
       for (const item of order.items) {
@@ -252,6 +275,8 @@ export class CashRegisterService {
 
     const openingFloat = Number(shift.openingFloat);
     const expectedCash = openingFloat + cashSales + totalCashIn - totalCashOut;
+    const netSales = Math.max(0, totalSales - totalTax - totalServiceFee);
+    const averageOrderValue = paidOrdersCount > 0 ? totalSales / paidOrdersCount : 0;
 
     // Sort itemized sales by quantity sold descending
     const itemizedSales = Array.from(itemsMap.values()).sort((a, b) => b.quantitySold - a.quantitySold);
@@ -282,6 +307,16 @@ export class CashRegisterService {
         totalCashIn,
         totalCashOut,
         expectedCash,
+        totalTax,
+        totalServiceFee,
+        totalDiscount,
+        netSales,
+        cashSalesCount,
+        cardSalesCount,
+        otherSalesCount,
+        paidOrdersCount,
+        cancelledOrdersCount,
+        averageOrderValue,
       },
       itemizedSales,
     };
