@@ -99,7 +99,8 @@ export class OrdersService {
         ? decimal(item.unitPrice, 'unitPrice')
         : product.sellingPrice;
       const totalAmount = quantity.mul(unitPrice);
-      return { product, quantity, unitPrice, totalAmount };
+      const unit = item.unit || (product as any).unit || 'pcs';
+      return { product, quantity, unitPrice, totalAmount, unit };
     });
     const subtotal = items.reduce((sum, item) => sum.add(item.totalAmount), new Prisma.Decimal(0));
     const serviceFee = dto.serviceFee ? decimal(dto.serviceFee, 'serviceFee') : new Prisma.Decimal(0);
@@ -136,6 +137,7 @@ export class OrdersService {
               productId: item.product.id,
               name: item.product.name,
               quantity: item.quantity,
+              unit: item.unit,
               unitPrice: item.unitPrice,
               totalAmount: item.totalAmount,
             })),

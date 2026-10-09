@@ -36,6 +36,11 @@ export class CreateProductDto {
   @IsDecimal()
   taxRate?: string;
 
+  @ApiPropertyOptional({ example: 'kg' })
+  @IsOptional()
+  @IsString()
+  unit?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

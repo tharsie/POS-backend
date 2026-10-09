@@ -54,15 +54,15 @@ export class KotService {
     const isUpdate = version > 1;
 
     // Calculate last dispatched quantity per product ID across all previous tickets
-    const lastDispatchedMap = new Map<string, { quantity: number; name: string }>();
+    const lastDispatchedMap = new Map<string, { quantity: number; name: string; unit?: string }>();
 
     for (const ticket of existingTickets) {
       for (const item of ticket.items) {
         const qty = Number(item.quantity);
         if (item.changeType === 'CANCELLED') {
-          lastDispatchedMap.set(item.productId, { quantity: 0, name: item.name });
+          lastDispatchedMap.set(item.productId, { quantity: 0, name: item.name, unit: (item as any).unit || 'pcs' });
         } else {
-          lastDispatchedMap.set(item.productId, { quantity: qty, name: item.name });
+          lastDispatchedMap.set(item.productId, { quantity: qty, name: item.name, unit: (item as any).unit || 'pcs' });
         }
       }
     }
@@ -72,6 +72,7 @@ export class KotService {
       productId: string;
       name: string;
       quantity: number;
+      unit?: string;
       previousQuantity: number | null;
       changeType: 'NEW' | 'MODIFIED' | 'CANCELLED' | 'UNCHANGED';
     }[] = [];
@@ -89,6 +90,7 @@ export class KotService {
           productId: orderItem.productId,
           name: orderItem.name,
           quantity: currQty,
+          unit: (orderItem as any).unit || 'pcs',
           previousQuantity: null,
           changeType: 'NEW',
         });
@@ -97,6 +99,7 @@ export class KotService {
           productId: orderItem.productId,
           name: orderItem.name,
           quantity: currQty,
+          unit: (orderItem as any).unit || 'pcs',
           previousQuantity: prevQty,
           changeType: 'MODIFIED',
         });
@@ -105,6 +108,7 @@ export class KotService {
           productId: orderItem.productId,
           name: orderItem.name,
           quantity: currQty,
+          unit: (orderItem as any).unit || 'pcs',
           previousQuantity: prevQty,
           changeType: 'UNCHANGED',
         });
@@ -118,6 +122,7 @@ export class KotService {
           productId,
           name: data.name,
           quantity: 0,
+          unit: data.unit || 'pcs',
           previousQuantity: data.quantity,
           changeType: 'CANCELLED',
         });
@@ -137,10 +142,11 @@ export class KotService {
         isUpdate,
         notes: dto.notes || (isUpdate ? `KOT Update v${version}` : 'POS Order Note'),
         items: {
-          create: kotItemsData.map((i) => ({
+          create: kotItemsData.map((i: any) => ({
             productId: i.productId,
             name: i.name,
             quantity: i.quantity,
+            unit: i.unit || 'pcs',
             previousQuantity: i.previousQuantity,
             changeType: i.changeType,
           })),

@@ -5,6 +5,7 @@ import {
   IsArray,
   IsDecimal,
   IsOptional,
+  IsString,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
@@ -22,6 +23,11 @@ export class CreateOrderItemDto {
   @IsOptional()
   @IsDecimal()
   unitPrice?: string;
+
+  @ApiPropertyOptional({ example: 'kg' })
+  @IsOptional()
+  @IsString()
+  unit?: string;
 }
 
 export class CreateOrderDto {

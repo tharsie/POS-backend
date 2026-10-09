@@ -416,6 +416,7 @@ model Product {
   sellingPrice Decimal         @map("selling_price") @db.Decimal(12, 2)
   costPrice    Decimal?        @map("cost_price") @db.Decimal(12, 2)
   taxRate      Decimal?        @map("tax_rate") @db.Decimal(5, 2)
+  unit         String?         @default("pcs") @map("unit")
   status       ProductStatus   @default(ACTIVE)
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
@@ -529,6 +530,7 @@ model OrderItem {
   productId   String  @map("product_id") @db.Uuid
   name        String
   quantity    Decimal @db.Decimal(14, 3)
+  unit        String? @default("pcs") @map("unit")
   unitPrice   Decimal @map("unit_price") @db.Decimal(12, 2)
   taxAmount   Decimal @default(0) @map("tax_amount") @db.Decimal(12, 2)
   totalAmount Decimal @map("total_amount") @db.Decimal(12, 2)
@@ -619,6 +621,7 @@ model KitchenOrderTicketItem {
   productId        String             @map("product_id") @db.Uuid
   name             String
   quantity         Decimal            @db.Decimal(14, 3)
+  unit             String?            @default("pcs") @map("unit")
   previousQuantity Decimal?           @map("previous_quantity") @db.Decimal(14, 3)
   changeType       KotItemChangeType  @default(NEW) @map("change_type")
   notes            String?

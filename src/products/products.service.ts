@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { TenantContextService } from '../common/tenant/tenant-context.service';
 import { AccessTokenPayload } from '../common/types/authenticated-request';
@@ -42,7 +43,8 @@ export class ProductsService {
         sellingPrice: decimal(dto.sellingPrice, 'sellingPrice'),
         costPrice: dto.costPrice ? decimal(dto.costPrice, 'costPrice') : undefined,
         taxRate: dto.taxRate ? decimal(dto.taxRate, 'taxRate') : undefined,
-      },
+        unit: dto.unit || 'pcs',
+      } as Prisma.ProductUncheckedCreateInput,
     });
     await this.auditLogs.create({
       businessId: context.businessId,
@@ -75,7 +77,8 @@ export class ProductsService {
         sellingPrice: dto.sellingPrice ? decimal(dto.sellingPrice, 'sellingPrice') : undefined,
         costPrice: dto.costPrice ? decimal(dto.costPrice, 'costPrice') : undefined,
         taxRate: dto.taxRate ? decimal(dto.taxRate, 'taxRate') : undefined,
-      },
+        unit: dto.unit !== undefined ? dto.unit : undefined,
+      } as Prisma.ProductUncheckedUpdateInput,
     });
     await this.auditLogs.create({
       businessId: context.businessId,
